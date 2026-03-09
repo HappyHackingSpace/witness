@@ -167,11 +167,13 @@ export default defineBackground(() => {
   // Open side panel on extension icon click
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-  // Right-click context menu
-  chrome.contextMenus.create({
-    id: "witness-capture",
-    title: "Capture this page",
-    contexts: ["page"],
+  // Right-click context menu — only create on install to avoid duplicate ID errors
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+      id: "witness-capture",
+      title: "Capture this page",
+      contexts: ["page"],
+    });
   });
 
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
