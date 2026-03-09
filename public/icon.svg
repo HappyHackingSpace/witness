@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background -->
+  <rect width="128" height="128" rx="22" fill="#0f0f13"/>
+  <!-- Eye shape (outer) -->
+  <path d="M64 38C42 38 26 56 22 64c4 8 20 26 42 26s38-18 42-26c-4-8-20-26-42-26z" fill="none" stroke="#6366f1" stroke-width="4.5" stroke-linejoin="round"/>
+  <!-- Iris -->
+  <circle cx="64" cy="64" r="14" fill="none" stroke="#6366f1" stroke-width="4"/>
+  <!-- Pupil -->
+  <circle cx="64" cy="64" r="5" fill="#6366f1"/>
+  <!-- Hash chain lines -->
+  <line x1="34" y1="96" x2="94" y2="96" stroke="#6366f1" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+  <line x1="42" y1="104" x2="86" y2="104" stroke="#6366f1" stroke-width="3" stroke-linecap="round" opacity="0.25"/>
+</svg>
