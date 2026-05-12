@@ -20,17 +20,17 @@
     "idb": "^8.0.3"
   },
   "devDependencies": {
-    "@types/chrome": "^0.1.40",
+    "@types/chrome": "^0.1.42",
     "@wxt-dev/module-svelte": "^2.0.5",
     "eslint": "^9.39.4",
     "eslint-plugin-security": "^3.0.1",
     "prettier": "^3.8.3",
     "svelte": "^5.55.5",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.59.2",
+    "typescript-eslint": "^8.59.3",
     "vite": "^6.4.2",
     "vitest": "^3.2.4",
-    "wxt": "^0.20.25"
+    "wxt": "^0.20.26"
   },
   "engines": {
     "node": ">=20",
