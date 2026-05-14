@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/chrome": "^0.1.42",
     "@wxt-dev/module-svelte": "^2.0.5",
-    "eslint": "^9.39.4",
+    "eslint": "^10.3.0",
     "eslint-plugin-security": "^3.0.1",
     "prettier": "^3.8.3",
     "svelte": "^5.55.7",
