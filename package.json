@@ -29,7 +29,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.4",
     "vite": "^6.4.2",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.6",
     "wxt": "^0.20.26"
   },
   "engines": {
