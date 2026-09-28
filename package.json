@@ -24,10 +24,10 @@
     "@wxt-dev/module-svelte": "^2.0.5",
     "eslint": "^9.39.4",
     "eslint-plugin-security": "^3.0.1",
-    "prettier": "^3.9.8",
-    "svelte": "^5.57.0",
+    "prettier": "^3.9.9",
+    "svelte": "^5.57.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.70.0",
+    "typescript-eslint": "^8.70.1",
     "vite": "^6.4.2",
     "vitest": "^3.2.6",
     "wxt": "^0.21.4"
