@@ -7,6 +7,8 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    cooldown:
+      default-days: 3
     labels:
       - "dependencies"
       - "automated"
@@ -28,6 +30,11 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
     labels:
       - "ci"
       - "automated"
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
