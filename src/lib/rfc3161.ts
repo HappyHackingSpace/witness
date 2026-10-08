@@ -59,13 +59,13 @@ function derInteger(value: number): Uint8Array {
     bytes.unshift(v & 0xff);
     v >>= 8;
   }
-  if (bytes[0] & 0x80) bytes.unshift(0);
+  if ((bytes[0] ?? 0) & 0x80) bytes.unshift(0);
   return derTlv(TAG_INTEGER, new Uint8Array(bytes));
 }
 
 function derIntegerBigBytes(bytes: Uint8Array): Uint8Array {
   // Ensure positive (prepend 0 if high bit set)
-  if (bytes[0] & 0x80) {
+  if ((bytes[0] ?? 0) & 0x80) {
     const padded = new Uint8Array(bytes.byteLength + 1);
     padded.set(bytes, 1);
     return derTlv(TAG_INTEGER, padded);
@@ -100,22 +100,37 @@ interface DerNode {
   totalLength: number;
 }
 
+// Input comes from remote TSAs, so out-of-range reads must fail loudly rather than
+// yield undefined and silently produce a bogus tree.
+function byteAt(data: Uint8Array, i: number): number {
+  const b = data[i];
+  if (b === undefined) throw new Error("Malformed DER: unexpected end of data");
+  return b;
+}
+
+function childAt(node: DerNode, i: number): DerNode {
+  const child = node.children?.[i];
+  if (!child) throw new Error("Malformed DER: missing child node");
+  return child;
+}
+
 function parseDer(data: Uint8Array, pos = 0): DerNode {
-  const tag = data[pos];
+  const tag = byteAt(data, pos);
   const constructed = (tag & 0x20) !== 0;
   let offset = pos + 1;
 
   // Parse length
   let length: number;
-  if (data[offset] < 0x80) {
-    length = data[offset];
+  const lengthByte = byteAt(data, offset);
+  if (lengthByte < 0x80) {
+    length = lengthByte;
     offset++;
   } else {
-    const numBytes = data[offset] & 0x7f;
+    const numBytes = lengthByte & 0x7f;
     offset++;
     length = 0;
     for (let i = 0; i < numBytes; i++) {
-      length = (length << 8) | data[offset + i];
+      length = (length << 8) | byteAt(data, offset + i);
     }
     offset += numBytes;
   }
@@ -224,19 +239,19 @@ function parseTimeStampResp(data: Uint8Array): TsaResponse {
   }
 
   // PKIStatusInfo is the first SEQUENCE child
-  const statusInfo = root.children[0];
+  const statusInfo = childAt(root, 0);
   if (!statusInfo.children || statusInfo.children.length < 1) {
     throw new Error("Invalid PKIStatusInfo");
   }
 
   // PKIStatus is the first INTEGER in PKIStatusInfo
-  const statusNode = statusInfo.children[0];
-  const status = statusNode.value[0];
+  const statusNode = childAt(statusInfo, 0);
+  const status = byteAt(statusNode.value, 0);
 
   let statusString: string | undefined;
-  if (statusInfo.children.length > 1 && statusInfo.children[1].tag === TAG_SEQUENCE) {
+  if (statusInfo.children.length > 1 && childAt(statusInfo, 1).tag === TAG_SEQUENCE) {
     // PKIFreeText - try to decode as UTF8
-    const textNode = findByTag(statusInfo.children[1], 0x0c); // UTF8String
+    const textNode = findByTag(childAt(statusInfo, 1), 0x0c); // UTF8String
     if (textNode) {
       statusString = new TextDecoder().decode(textNode.value);
     }
@@ -246,7 +261,7 @@ function parseTimeStampResp(data: Uint8Array): TsaResponse {
   let token: Uint8Array | null = null;
   if (root.children.length > 1 && (status === 0 || status === 1)) {
     // Re-encode the token child as-is (it's the complete ContentInfo)
-    const tokenNode = root.children[1];
+    const tokenNode = childAt(root, 1);
     token = data.subarray(
       tokenNode.offset - (tokenNode.totalLength - tokenNode.value.byteLength),
       tokenNode.offset + tokenNode.value.byteLength,
@@ -299,7 +314,7 @@ export function parseTimestampToken(base64Token: string): TimestampInfo | null {
     // Must be a SEQUENCE (ContentInfo) with at least 2 children (contentType OID + content)
     if (root.tag !== TAG_SEQUENCE || !root.children || root.children.length < 2) return null;
     // First child must be an OID
-    if (root.children[0].tag !== TAG_OID) return null;
+    if (childAt(root, 0).tag !== TAG_OID) return null;
 
     // ContentInfo -> SignedData -> encapContentInfo -> eContent -> TSTInfo
     // Navigate: SEQUENCE { OID, [0] EXPLICIT { SignedData } }
@@ -307,10 +322,8 @@ export function parseTimestampToken(base64Token: string): TimestampInfo | null {
     // encapContentInfo: SEQUENCE { contentType, [0] EXPLICIT { OCTET STRING(TSTInfo) } }
 
     // Find all GeneralizedTime nodes - genTime is typically the first one in TSTInfo
-    const genTimeNodes = findAllByTag(root, TAG_GENERALIZED_TIME);
-    const genTime = genTimeNodes.length > 0
-      ? decodeGeneralizedTime(genTimeNodes[0].value)
-      : "unknown";
+    const genTimeNode = findAllByTag(root, TAG_GENERALIZED_TIME)[0];
+    const genTime = genTimeNode ? decodeGeneralizedTime(genTimeNode.value) : "unknown";
 
     // Find the TSTInfo by looking for the inner content
     // TSTInfo contains: version, policy OID, messageImprint, serialNumber, genTime
@@ -327,20 +340,20 @@ export function parseTimestampToken(base64Token: string): TimestampInfo | null {
         const inner = parseDer(os.value);
         if (inner.tag === TAG_SEQUENCE && inner.children && inner.children.length >= 5) {
           // Likely TSTInfo: version, policy, messageImprint, serialNumber, genTime
-          const versionNode = inner.children[0];
+          const versionNode = childAt(inner, 0);
           if (versionNode.tag === TAG_INTEGER && versionNode.value[0] === 1) {
             // This is TSTInfo
             // serialNumber is child[3]
-            const serialNode = inner.children[3];
+            const serialNode = childAt(inner, 3);
             if (serialNode.tag === TAG_INTEGER) {
               serialNumber = Array.from(serialNode.value)
                 .map((b) => b.toString(16).padStart(2, "0"))
                 .join("");
             }
             // messageImprint is child[2]
-            const miNode = inner.children[2];
+            const miNode = childAt(inner, 2);
             if (miNode.children && miNode.children.length >= 2) {
-              const hashNode = miNode.children[1];
+              const hashNode = childAt(miNode, 1);
               if (hashNode.tag === TAG_OCTET_STRING) {
                 hashedMessage = Array.from(hashNode.value)
                   .map((b) => b.toString(16).padStart(2, "0"))
@@ -474,10 +487,10 @@ function extractCmsSignedData(tokenData: Uint8Array): {
     if (!root.children || root.children.length < 2) return null;
 
     // [0] EXPLICIT wrapping SignedData
-    const contentWrapper = root.children[1];
+    const contentWrapper = childAt(root, 1);
     if ((contentWrapper.tag & 0x1f) !== 0 || !contentWrapper.children?.length) return null;
 
-    const signedData = contentWrapper.children[0];
+    const signedData = childAt(contentWrapper, 0);
     if (!signedData.children || signedData.children.length < 4) return null;
 
     // SignedData children: version, digestAlgorithms, encapContentInfo, [certificates], [crls], signerInfos
@@ -495,8 +508,8 @@ function extractCmsSignedData(tokenData: Uint8Array): {
     }
     // signerInfos is the last SET in SignedData
     for (let i = signedData.children.length - 1; i >= 0; i--) {
-      if (signedData.children[i].tag === 0x31) {
-        signerInfos = signedData.children[i];
+      if (childAt(signedData, i).tag === 0x31) {
+        signerInfos = childAt(signedData, i);
         break;
       }
     }
@@ -504,32 +517,32 @@ function extractCmsSignedData(tokenData: Uint8Array): {
     if (!certificates?.children?.length || !signerInfos?.children?.length) return null;
 
     // Extract first certificate's SubjectPublicKeyInfo
-    const cert = certificates.children[0];
+    const cert = childAt(certificates, 0);
     if (!cert.children || cert.children.length < 1) return null;
-    const tbsCert = cert.children[0]; // tbsCertificate
+    const tbsCert = childAt(cert, 0); // tbsCertificate
     if (!tbsCert.children || tbsCert.children.length < 7) return null;
 
     // SubjectPublicKeyInfo is at index 6 in tbsCertificate
     // (version[0], serialNumber, signature, issuer, validity, subject, SPKI)
-    const spki = tbsCert.children[6];
+    const spki = childAt(tbsCert, 6);
     if (spki.tag !== TAG_SEQUENCE) return null;
-    const spkiBytes = reencodeNode(certificates.children[0].value, spki);
+    const spkiBytes = reencodeNode(childAt(certificates, 0).value, spki);
 
     // Get SPKI algorithm OID
     let spkiAlgOid = new Uint8Array(0);
     let spkiCurveOid: Uint8Array<ArrayBuffer> | null = null;
     if (spki.children && spki.children.length >= 1) {
-      const algIdNode = spki.children[0];
+      const algIdNode = childAt(spki, 0);
       if (algIdNode.children && algIdNode.children.length >= 1) {
-        spkiAlgOid = algIdNode.children[0].value;
-        if (algIdNode.children.length >= 2 && algIdNode.children[1].tag === TAG_OID) {
-          spkiCurveOid = algIdNode.children[1].value;
+        spkiAlgOid = childAt(algIdNode, 0).value;
+        if (algIdNode.children.length >= 2 && childAt(algIdNode, 1).tag === TAG_OID) {
+          spkiCurveOid = childAt(algIdNode, 1).value;
         }
       }
     }
 
     // Extract first SignerInfo
-    const signerInfo = signerInfos.children[0];
+    const signerInfo = childAt(signerInfos, 0);
     if (!signerInfo.children || signerInfo.children.length < 5) return null;
 
     // SignerInfo: version, sid, digestAlgorithm, [0]signedAttrs, signatureAlgorithm, signature
@@ -539,19 +552,19 @@ function extractCmsSignedData(tokenData: Uint8Array): {
     let digestAlgNode: DerNode | null = null;
 
     for (let i = 0; i < signerInfo.children.length; i++) {
-      const child = signerInfo.children[i];
+      const child = childAt(signerInfo, i);
       if (child.tag === 0xa0) signedAttrsNode = child; // implicit [0] signedAttrs
       if (child.tag === TAG_OCTET_STRING && !sigNode && signedAttrsNode) sigNode = child;
     }
 
     // digestAlgorithm is child[2] (SEQUENCE), signatureAlgorithm comes after signedAttrs
-    digestAlgNode = signerInfo.children[2];
+    digestAlgNode = childAt(signerInfo, 2);
     // Find signatureAlgorithm: the SEQUENCE after signedAttrs
     for (let i = 0; i < signerInfo.children.length; i++) {
-      if (signerInfo.children[i] === signedAttrsNode && i + 1 < signerInfo.children.length) {
-        sigAlgNode = signerInfo.children[i + 1];
+      if (childAt(signerInfo, i) === signedAttrsNode && i + 1 < signerInfo.children.length) {
+        sigAlgNode = childAt(signerInfo, i + 1);
         if (i + 2 < signerInfo.children.length) {
-          sigNode = signerInfo.children[i + 2];
+          sigNode = childAt(signerInfo, i + 2);
         }
         break;
       }
@@ -592,8 +605,8 @@ function ecdsaDerToP1363(derSig: Uint8Array<ArrayBuffer>, curveByteLen: number):
   try {
     const seq = parseDer(derSig);
     if (!seq.children || seq.children.length < 2) return derSig;
-    const rRaw = seq.children[0].value;
-    const sRaw = seq.children[1].value;
+    const rRaw = childAt(seq, 0).value;
+    const sRaw = childAt(seq, 1).value;
 
     // Strip leading zero bytes used for sign padding
     const stripLeadingZeros = (b: Uint8Array) => {

@@ -215,7 +215,7 @@ function formatHashes(cap: CaptureMetadata): string {
 }
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array {
-  const base64 = dataUrl.split(",")[1];
+  const base64 = dataUrl.split(",")[1] ?? "";
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {

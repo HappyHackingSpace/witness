@@ -165,7 +165,7 @@ export function generateWarc(inputs: WarcInput[], filename: string): Uint8Array 
     }
 
     if (screenshot) {
-      const base64 = screenshot.split(",")[1];
+      const base64 = screenshot.split(",")[1] ?? "";
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) {

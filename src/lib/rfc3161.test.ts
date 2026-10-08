@@ -86,7 +86,7 @@ describe("rfc3161", () => {
 
       // Verify the request was sent
       expect(globalThis.fetch).toHaveBeenCalled();
-      const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const [url, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0] ?? [];
       expect(url).toContain("freetsa.org");
       expect(options.headers["Content-Type"]).toBe("application/timestamp-query");
 
