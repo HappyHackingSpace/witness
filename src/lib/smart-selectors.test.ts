@@ -15,8 +15,8 @@ describe("detectPatterns", () => {
     it("detects standard email addresses", () => {
       const matches = detectPatterns("Contact us at hello@example.com for info.");
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("email");
-      expect(matches[0].value).toBe("hello@example.com");
+      expect(matches[0]?.type).toBe("email");
+      expect(matches[0]?.value).toBe("hello@example.com");
     });
 
     it("detects multiple emails", () => {
@@ -29,7 +29,7 @@ describe("detectPatterns", () => {
     it("detects emails with plus addressing", () => {
       const matches = detectPatterns("Send to user+tag@example.com please");
       expect(matches).toHaveLength(1);
-      expect(matches[0].value).toBe("user+tag@example.com");
+      expect(matches[0]?.value).toBe("user+tag@example.com");
     });
   });
 
@@ -38,20 +38,20 @@ describe("detectPatterns", () => {
     it("detects international phone with dashes", () => {
       const matches = detectPatterns("Call +1-555-123-4567 now");
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("phone");
-      expect(matches[0].value).toBe("+1-555-123-4567");
+      expect(matches[0]?.type).toBe("phone");
+      expect(matches[0]?.value).toBe("+1-555-123-4567");
     });
 
     it("detects UK phone number", () => {
       const matches = detectPatterns("Ring +44 20 7946 0958 for support");
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("phone");
+      expect(matches[0]?.type).toBe("phone");
     });
 
     it("detects phone with parentheses", () => {
       const matches = detectPatterns("Dial +1 (555) 123-4567 today");
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("phone");
+      expect(matches[0]?.type).toBe("phone");
     });
   });
 
@@ -61,31 +61,31 @@ describe("detectPatterns", () => {
       const addr = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
       const matches = detectPatterns(`Send BTC to ${addr} please`);
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("crypto");
-      expect(matches[0].value).toBe(addr);
+      expect(matches[0]?.type).toBe("crypto");
+      expect(matches[0]?.value).toBe(addr);
     });
 
     it("detects Bitcoin P2SH address (3...)", () => {
       const addr = "3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy";
       const matches = detectPatterns(`Pay to ${addr}`);
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("crypto");
+      expect(matches[0]?.type).toBe("crypto");
     });
 
     it("detects Bitcoin bech32 address (bc1...)", () => {
       const addr = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
       const matches = detectPatterns(`Wallet: ${addr}`);
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("crypto");
-      expect(matches[0].value).toBe(addr);
+      expect(matches[0]?.type).toBe("crypto");
+      expect(matches[0]?.value).toBe(addr);
     });
 
     it("detects Ethereum address", () => {
       const addr = "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD08";
       const matches = detectPatterns(`ETH address: ${addr}`);
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("crypto");
-      expect(matches[0].value).toBe(addr);
+      expect(matches[0]?.type).toBe("crypto");
+      expect(matches[0]?.value).toBe(addr);
     });
   });
 
@@ -94,8 +94,8 @@ describe("detectPatterns", () => {
     it("detects IPv4 address", () => {
       const matches = detectPatterns("Server is at 192.168.1.100 on the LAN");
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("ip");
-      expect(matches[0].value).toBe("192.168.1.100");
+      expect(matches[0]?.type).toBe("ip");
+      expect(matches[0]?.value).toBe("192.168.1.100");
     });
 
     it("detects multiple IPs", () => {
@@ -111,7 +111,7 @@ describe("detectPatterns", () => {
     it("detects edge-case IP 0.0.0.0", () => {
       const matches = detectPatterns("Binding to 0.0.0.0 for all interfaces");
       expect(matches).toHaveLength(1);
-      expect(matches[0].value).toBe("0.0.0.0");
+      expect(matches[0]?.value).toBe("0.0.0.0");
     });
   });
 
@@ -120,8 +120,8 @@ describe("detectPatterns", () => {
     it("detects @username", () => {
       const matches = detectPatterns("Follow @johndoe for updates");
       expect(matches).toHaveLength(1);
-      expect(matches[0].type).toBe("social-handle");
-      expect(matches[0].value).toBe("@johndoe");
+      expect(matches[0]?.type).toBe("social-handle");
+      expect(matches[0]?.value).toBe("@johndoe");
     });
 
     it("detects multiple handles", () => {
@@ -187,15 +187,15 @@ describe("detectPatterns", () => {
     it("includes surrounding text in context", () => {
       const text = "Please contact admin@example.com for help with your account.";
       const matches = detectPatterns(text);
-      expect(matches[0].context).toContain("admin@example.com");
-      expect(matches[0].context.length).toBeGreaterThan("admin@example.com".length);
+      expect(matches[0]?.context).toContain("admin@example.com");
+      expect(matches[0]?.context.length ?? 0).toBeGreaterThan("admin@example.com".length);
     });
 
     it("adds ellipsis when context is truncated", () => {
       const text = "A".repeat(50) + " test@example.com " + "B".repeat(50);
       const matches = detectPatterns(text);
-      expect(matches[0].context).toMatch(/^\.\.\./);
-      expect(matches[0].context).toMatch(/\.\.\.$/);
+      expect(matches[0]?.context).toMatch(/^\.\.\./);
+      expect(matches[0]?.context).toMatch(/\.\.\.$/);
     });
   });
 

@@ -55,7 +55,15 @@ export default defineBackground(() => {
   }
 
   // Load state from storage on startup, auto-create default case if needed
-  chrome.storage.local.get(
+  chrome.storage.local.get<{
+    [STORAGE_KEYS.CAPTURE_ENABLED]?: boolean;
+    [STORAGE_KEYS.ACTIVE_CASE]?: string | null;
+    [STORAGE_KEYS.LAST_HASH]?: string | null;
+    [STORAGE_KEYS.DOMAIN_RULES]?: DomainRule[];
+    [STORAGE_KEYS.CAPTURE_MODE]?: CaptureMode;
+    [STORAGE_KEYS.FULLPAGE_SCREENSHOT]?: boolean;
+    [STORAGE_KEYS.SMART_DETECTION]?: boolean;
+  }>(
     [STORAGE_KEYS.CAPTURE_ENABLED, STORAGE_KEYS.ACTIVE_CASE, STORAGE_KEYS.LAST_HASH, STORAGE_KEYS.DOMAIN_RULES, STORAGE_KEYS.CAPTURE_MODE, STORAGE_KEYS.FULLPAGE_SCREENSHOT, STORAGE_KEYS.SMART_DETECTION],
     async (result) => {
       captureEnabled = result[STORAGE_KEYS.CAPTURE_ENABLED] ?? false;
@@ -284,8 +292,7 @@ export default defineBackground(() => {
       navBmp.close();
 
       // Draw remaining tiles (without fixed elements) over the rest
-      for (let i = 1; i < tiles.length; i++) {
-        const tile = tiles[i];
+      for (const tile of tiles.slice(1)) {
         const blob = await (await fetch(`data:image/jpeg;base64,${tile.base64}`)).blob();
         const bmp = await createImageBitmap(blob);
         const dstY = Math.round(tile.y * scale);
@@ -662,7 +669,7 @@ export default defineBackground(() => {
   }
 
   function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
-    const base64 = dataUrl.split(",")[1];
+    const base64 = dataUrl.split(",")[1] ?? "";
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
